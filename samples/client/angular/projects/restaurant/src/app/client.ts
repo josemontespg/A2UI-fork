@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { A2uiRendererService } from '@a2ui/angular/v0_9';
+import {A2uiRendererService} from '@a2ui/angular/v0_9';
 import * as Types from '@a2ui/web_core/types/types';
-import { inject, Injectable, signal } from '@angular/core';
+import {inject, Injectable, signal} from '@angular/core';
 import {A2uiClientAction, A2uiMessage} from '@a2ui/web_core/v0_9';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class Client {
   private readonly renderer = inject(A2uiRendererService);
   private contextId?: string;
@@ -42,8 +42,8 @@ export class Client {
 
       const isString = typeof request === 'string';
       const bodyData = isString
-        ? { query: request, contextId: this.contextId }
-        : { event: request, contextId: this.contextId };
+        ? {query: request, contextId: this.contextId}
+        : {event: request, contextId: this.contextId};
 
       const response = await fetch('/a2a', {
         body: JSON.stringify(bodyData),
@@ -51,7 +51,7 @@ export class Client {
       });
 
       if (!response.ok) {
-        const error = (await response.json()) as { error: string };
+        const error = (await response.json()) as {error: string};
         throw new Error(error.error);
       }
 
@@ -84,11 +84,11 @@ export class Client {
     let buffer = '';
 
     while (true) {
-      const { done, value } = await reader.read();
+      const {done, value} = await reader.read();
       if (done) break;
 
       const now = performance.now();
-      buffer += decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, {stream: true});
 
       // Parse SSE events. The server sends "data: <json>\n\n"
       const lines = buffer.split('\n\n');
