@@ -16,7 +16,7 @@
 
 import {A2uiRendererService} from '@a2ui/angular/v0_9';
 import * as Types from '@a2ui/web_core/types/types';
-import {inject, Injectable, signal} from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import {A2uiClientAction, A2uiMessage} from '@a2ui/web_core/v0_9';
 
 @Injectable({providedIn: 'root'})
