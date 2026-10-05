@@ -37,7 +37,7 @@ import {AgentStubService} from './agent-stub.service';
 import {AgentStubV08Service} from './agent-stub-v08.service';
 import {AgentStubV09Service} from './agent-stub-v09.service';
 import {provideMarkdownRenderer, Surface as SurfaceV08} from '@a2ui/angular/v0_8';
-import {DemoCatalog} from './demo-catalog';
+import {DemoCatalog, createDemoCatalogs} from './demo-catalog';
 import {A2uiClientAction} from '@a2ui/web_core/v0_9';
 import {A2uiExample, A2UI_VERSION, A2UI_EXAMPLES, Version} from './types';
 import {ActionDispatcher} from './action-dispatcher.service';
@@ -771,7 +771,7 @@ function getUseUniversalComponents(): boolean {
         dispatcher: ActionDispatcher,
         injectedUniversal: boolean,
       ) => ({
-        catalogs: [catalog],
+        catalogs: [catalog, ...createDemoCatalogs()],
         useUniversalComponents: getUseUniversalComponents() || injectedUniversal,
         actionHandler: (action: A2uiClientAction) => dispatcher.dispatch(action),
       }),

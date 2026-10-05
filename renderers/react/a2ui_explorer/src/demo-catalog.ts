@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+import {IFRAME_CATALOG_ID, iframeCatalog} from '@a2ui/catalog-iframe';
+import {type ReactCatalogComponent} from '@a2ui/react/v0_9';
 import {Catalog} from '@a2ui/web_core/v0_9';
 import {basicCatalog, BASIC_FUNCTIONS} from '@a2ui/web_core/v0_9/basic_catalog';
+import {basicCatalog as basicCatalogV10} from '@a2ui/web_core/v1_0';
 import {customSliderComponent} from './custom-slider';
 import {customGridComponent} from './custom-grid';
 
@@ -29,3 +32,17 @@ export const demoCatalog = new Catalog(
   [...basicCatalog.components.values(), customSliderComponent, customGridComponent],
   BASIC_FUNCTIONS,
 );
+
+/**
+ * Additional v1.0 catalogs registered in the React explorer.
+ */
+export function createDemoCatalogs(): Array<Catalog<ReactCatalogComponent>> {
+  const iframeDemoCatalog = new Catalog<ReactCatalogComponent>(
+    IFRAME_CATALOG_ID,
+    '1.0',
+    [...basicCatalogV10.components.values(), ...iframeCatalog.components.values()],
+    [...basicCatalogV10.functions.values()],
+    basicCatalogV10.themeSchema,
+  );
+  return [iframeDemoCatalog];
+}

@@ -48,6 +48,45 @@ Options:
   -h, --help             Show this help message
 `;
 
+const EXTRA_V09_EXAMPLES = [
+  {
+    filePath: '../../../catalogs/iframe/examples/srcdoc-tip-calculator.json',
+    catalog: 'iframe',
+  },
+];
+
+function readExampleFile(filePath, catalog, version) {
+  const file = path.basename(filePath);
+  const content = fs.readFileSync(filePath, 'utf-8');
+  try {
+    const data = JSON.parse(content);
+    const nameFromFile = file
+      .replace('.json', '')
+      .replace(/^[0-9]+_/, '')
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+
+    if (Array.isArray(data)) {
+      return {
+        version: version,
+        name: version === '0.8' ? `${nameFromFile} (${catalog})` : nameFromFile,
+        description: `Example from ${catalog} catalog`,
+        messages: data,
+      };
+    }
+    return {
+      ...data,
+      version: version,
+      name:
+        version === '0.8' ? `${data.name || nameFromFile} (${catalog})` : data.name || nameFromFile,
+      description: data.description || `Example from ${catalog} catalog`,
+      messages: data.messages || [],
+    };
+  } catch (e) {
+    throw new Error(`Error parsing ${filePath}`, {cause: e});
+  }
+}
+
 /**
  * Reads examples for a given version and catalogs.
  */
@@ -63,41 +102,7 @@ function readExamples(specPath, catalogs, version) {
         .sort();
       for (const file of files) {
         const filePath = path.join(examplesDir, file);
-        const content = fs.readFileSync(filePath, 'utf-8');
-        try {
-          const data = JSON.parse(content);
-          let example;
-
-          const nameFromFile = file
-            .replace('.json', '')
-            .replace(/^[0-9]+_/, '')
-            .replace(/[-_]/g, ' ')
-            .replace(/\b\w/g, l => l.toUpperCase());
-
-          if (Array.isArray(data)) {
-            example = {
-              version: version,
-              name: version === '0.8' ? `${nameFromFile} (${catalog})` : nameFromFile,
-              description: `Example from ${catalog} catalog`,
-              messages: data,
-            };
-          } else {
-            example = {
-              ...data,
-              version: version,
-              name:
-                version === '0.8'
-                  ? `${data.name || nameFromFile} (${catalog})`
-                  : data.name || nameFromFile,
-              description: data.description || `Example from ${catalog} catalog`,
-              messages: data.messages || [],
-            };
-          }
-
-          examples.push(example);
-        } catch (e) {
-          throw new Error(`Error parsing ${filePath}`, {cause: e});
-        }
+        examples.push(readExampleFile(filePath, catalog, version));
       }
     }
   }
@@ -126,7 +131,10 @@ async function main() {
   const catalogs = values.catalog;
 
   const examplesV08 = readExamples('../../../specification/v0_8/json/catalogs', catalogs, '0.8');
-  const examplesV09 = readExamples('../../../specification/v0_9/catalogs', catalogs, '0.9');
+  const examplesV09 = [
+    ...readExamples('../../../specification/v0_9/catalogs', catalogs, '0.9'),
+    ...EXTRA_V09_EXAMPLES.map(({filePath, catalog}) => readExampleFile(filePath, catalog, '0.9')),
+  ];
 
   // Generate the file now!
   const tsContent = `/**

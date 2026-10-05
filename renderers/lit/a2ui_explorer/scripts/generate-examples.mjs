@@ -21,6 +21,12 @@ const SPEC_EXAMPLES_DIR = path.resolve(
   import.meta.dirname,
   '../../../../specification/v0_9/catalogs/basic/examples',
 );
+const EXTRA_EXAMPLES = [
+  {
+    key: '38_srcdoc-tip-calculator.json',
+    relativePath: '../../../../../catalogs/iframe/examples/srcdoc-tip-calculator.json',
+  },
+];
 const OUT_FILE = path.resolve(import.meta.dirname, '../src/generated/examples-list.ts');
 
 /**
@@ -53,6 +59,12 @@ function generateExamplesBundle() {
 
     imports.push(`import ${variableName} from '${relativePath}';`);
     entries.push(`  '${file}': { default: ${variableName} }`);
+  });
+
+  EXTRA_EXAMPLES.forEach((extra, index) => {
+    const variableName = `extra_example_${index}`;
+    imports.push(`import ${variableName} from '${extra.relativePath}';`);
+    entries.push(`  '${extra.key}': { default: ${variableName} }`);
   });
 
   const content = `/**

@@ -20,7 +20,7 @@ import {customElement, state} from 'lit/decorators.js';
 import {MessageProcessor, A2uiMessage, A2uiClientAction} from '@a2ui/web_core/v0_9';
 import {Context} from '@a2ui/lit/v0_9';
 import {renderMarkdown} from '@a2ui/markdown-it';
-import {demoCatalog} from './demo-catalog.js';
+import {demoCatalog, createDemoCatalogs} from './demo-catalog.js';
 import {getDemoItems, DemoItem} from './examples';
 import {appStyles} from './local-gallery.css';
 
@@ -41,10 +41,13 @@ export class LocalGallery extends LitElement {
   @provide({context: Context.markdown})
   private markdownRenderer = renderMarkdown;
 
-  private processor = new MessageProcessor([demoCatalog], (action: A2uiClientAction) => {
-    this.log(`Action dispatched: ${action.surfaceId}`, action);
-    this.actionLog.push(action);
-  });
+  private processor = new MessageProcessor(
+    [demoCatalog, ...createDemoCatalogs()],
+    (action: A2uiClientAction) => {
+      this.log(`Action dispatched: ${action.surfaceId}`, action);
+      this.actionLog.push(action);
+    },
+  );
 
   private dataModelSubscription?: {unsubscribe: () => void};
 
@@ -250,7 +253,7 @@ export class LocalGallery extends LitElement {
    */
   private applyPrimaryColorToMessages(messages: A2uiMessage[]): A2uiMessage[] {
     return messages.map(msg => {
-      if ('createSurface' in msg && this.primaryColor) {
+      if (msg.version === 'v0.9' && 'createSurface' in msg && this.primaryColor) {
         return {
           ...msg,
           createSurface: {
