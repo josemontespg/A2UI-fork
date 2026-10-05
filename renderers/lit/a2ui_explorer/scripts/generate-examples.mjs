@@ -32,6 +32,10 @@ const EXTRA_EXAMPLES = [
     rewritePlaceholderUrl: 'https://example.com/a2ui-apps/order-tracker/',
     fixturePath: '/a2ui-fixtures/apps/order_tracker.html',
   },
+  {
+    key: '40_mcp-app-order-summary.json',
+    relativePath: '../../../../../catalogs/mcp/v1/examples/mcp-app-order-summary.json',
+  },
 ];
 const OUT_FILE = path.resolve(import.meta.dirname, '../src/generated/examples-list.ts');
 

@@ -33,6 +33,7 @@ import {
   MarkdownRenderer,
 } from '@a2ui/angular/v0_9';
 import {IFRAME_CATALOG_ID, iframeCatalog} from '@a2ui/catalog-iframe';
+import {MCP_CATALOG_ID, mcpCatalog} from '@a2ui/catalog-mcp/v1_0';
 import {type ComponentApi, ComponentContext} from '@a2ui/web_core/v0_9';
 import {setMarkdownRenderer} from '@a2ui/web_core/v0_9/basic_catalog';
 import {
@@ -133,5 +134,14 @@ export function createDemoCatalogs(): AngularCatalog[] {
     [...basicCatalogV10.functions.values()],
     basicCatalogV10.themeSchema,
   );
-  return [iframeDemoCatalog];
+  const mcpDemoCatalog = new AngularCatalog(
+    MCP_CATALOG_ID,
+    '1.0',
+    [...basicCatalogV10.components.values(), ...mcpCatalog.components.values()].map(
+      toUniversalDemoComponent,
+    ),
+    [...basicCatalogV10.functions.values(), ...mcpCatalog.functions.values()],
+    basicCatalogV10.themeSchema,
+  );
+  return [iframeDemoCatalog, mcpDemoCatalog];
 }

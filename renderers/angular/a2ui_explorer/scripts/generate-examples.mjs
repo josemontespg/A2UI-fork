@@ -57,6 +57,10 @@ const EXTRA_V09_EXAMPLES = [
     filePath: '../../../catalogs/iframe/examples/url-order-tracker.json',
     catalog: 'iframe',
   },
+  {
+    filePath: '../../../catalogs/mcp/v1/examples/mcp-app-order-summary.json',
+    catalog: 'mcp',
+  },
 ];
 
 function readExampleFile(filePath, catalog, version) {

@@ -158,6 +158,27 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Normalizes a bound `toolResult` value from the A2UI data model into a standard MCP
+ * `CallToolResult`. Values that already carry a `content` array are forwarded as-is; plain
+ * objects and primitives are wrapped with both a JSON text block and `structuredContent` so
+ * views reading either `result.content` or `result.structuredContent` work out of the box.
+ */
+function toCallToolResult(value: unknown): CallToolResult {
+  if (isRecord(value) && Array.isArray(value['content'])) {
+    return value as CallToolResult;
+  }
+  const text = typeof value === 'string' ? value : JSON.stringify(value ?? null);
+  return {
+    content: [{type: 'text', text}],
+    ...(isRecord(value) ? {structuredContent: value} : {}),
+  };
+}
+
 /** The host context in the shape of the protocol: the container dimensions of the frame. */
 function toHostContext(context: FrameHostContext): McpUiHostContext {
   return {containerDimensions: {...context.containerDimensions}};
@@ -176,6 +197,9 @@ export class McpAppBridge {
   private dataSync: DataModelSync | null = null;
   private dataPaths: Readonly<Record<string, string>> = {};
   private stopHostContextObserver: (() => void) | null = null;
+  private initialized = false;
+  private lastSentToolInputJson: string | null = null;
+  private lastSentToolResultJson: string | null = null;
 
   constructor(private readonly options: McpAppBridgeOptions) {}
 
@@ -205,9 +229,16 @@ export class McpAppBridge {
       this.options.onSizeChange?.(width, height);
     };
     bridge.oninitialized = () => {
+      this.initialized = true;
       this.sendBoundData();
     };
     bridge.oncalltool = async params => this.handleToolCall(params);
+    bridge.onopenlink = async () => ({});
+    bridge.onmessage = async () => ({});
+    bridge.onupdatemodelcontext = async params => {
+      this.handleUpdateModelContext(params.structuredContent);
+      return {};
+    };
     bridge.setNotificationHandler(DataModelChangeNotificationSchema, notification => {
       this.handleDataModelChange(notification.params);
     });
@@ -237,6 +268,9 @@ export class McpAppBridge {
     this.stopHostContextObserver = null;
     this.dataSync?.dispose();
     this.dataSync = null;
+    this.initialized = false;
+    this.lastSentToolInputJson = null;
+    this.lastSentToolResultJson = null;
     const bridge = this.appBridge;
     this.appBridge = null;
     bridge?.close().catch((error: unknown) => {
@@ -246,11 +280,104 @@ export class McpAppBridge {
 
   /**
    * Sends the current value of every bound path once the app is initialized, so an app that
-   * renders bound state does not have to wait for the first change.
+   * renders bound state does not have to wait for the first change. Also emits the standard MCP
+   * Apps `ui/notifications/tool-input` and `ui/notifications/tool-result` notifications for
+   * standard `@modelcontextprotocol/ext-apps` views.
    */
   private sendBoundData(): void {
     for (const [key, path] of Object.entries(this.dataPaths)) {
-      this.sendUpdate({key, value: this.options.host.getData(path)});
+      this.sendDataModelUpdate({key, value: this.options.host.getData(path)});
+    }
+    this.sendStandardToolNotifications();
+  }
+
+  private sendStandardToolNotifications(): void {
+    const toolInputArgs = this.buildToolInputArguments();
+    if (toolInputArgs !== null) {
+      this.sendToolInput(toolInputArgs);
+    } else if ('toolResult' in this.dataPaths) {
+      this.sendToolInput({});
+    }
+    const toolResultPath = this.dataPaths['toolResult'];
+    if (toolResultPath !== undefined) {
+      const resultValue = this.options.host.getData(toolResultPath);
+      if (resultValue !== undefined) {
+        this.sendToolResult(resultValue);
+      }
+    }
+  }
+
+  private buildToolInputArguments(): Record<string, unknown> | null {
+    const entries = Object.entries(this.dataPaths).filter(([key]) => key !== 'toolResult');
+    if (entries.length === 0) {
+      return null;
+    }
+    const explicitToolInputPath = this.dataPaths['toolInput'];
+    if (explicitToolInputPath !== undefined) {
+      const raw = this.options.host.getData(explicitToolInputPath);
+      const base: Record<string, unknown> = isRecord(raw) ? {...raw} : {value: raw};
+      for (const [key, path] of entries) {
+        if (key !== 'toolInput') {
+          base[key] = this.options.host.getData(path);
+        }
+      }
+      return base;
+    }
+    const args: Record<string, unknown> = {};
+    for (const [key, path] of entries) {
+      args[key] = this.options.host.getData(path);
+    }
+    return args;
+  }
+
+  private sendToolInput(args: Record<string, unknown>): void {
+    const bridge = this.appBridge;
+    if (!bridge) {
+      return;
+    }
+    const serialized = JSON.stringify(args);
+    if (serialized === this.lastSentToolInputJson) {
+      return;
+    }
+    this.lastSentToolInputJson = serialized;
+    bridge.sendToolInput({arguments: args}).catch((error: unknown) => {
+      console.error(`${LOG_PREFIX} Failed to send tool-input:`, error);
+    });
+  }
+
+  private sendToolResult(value: unknown): void {
+    const bridge = this.appBridge;
+    if (!bridge) {
+      return;
+    }
+    const serialized = JSON.stringify(value);
+    if (serialized === this.lastSentToolResultJson) {
+      return;
+    }
+    this.lastSentToolResultJson = serialized;
+    bridge.sendToolResult(toCallToolResult(value)).catch((error: unknown) => {
+      console.error(`${LOG_PREFIX} Failed to send tool-result:`, error);
+    });
+  }
+
+  private sendUpdate(update: DataModelUpdate): void {
+    this.sendDataModelUpdate(update);
+    if (!this.initialized) {
+      return;
+    }
+    if (update.key === 'toolResult') {
+      const toolResultPath = this.dataPaths['toolResult'];
+      if (toolResultPath !== undefined) {
+        const resultValue = this.options.host.getData(toolResultPath);
+        if (resultValue !== undefined) {
+          this.sendToolResult(resultValue);
+        }
+      }
+      return;
+    }
+    const toolInputArgs = this.buildToolInputArguments();
+    if (toolInputArgs !== null) {
+      this.sendToolInput(toolInputArgs);
     }
   }
 
@@ -259,7 +386,7 @@ export class McpAppBridge {
    * not part of the `AppBridge` notification types, so they go through the transport directly,
    * which is what `AppBridge.notification` does for its own notifications.
    */
-  private sendUpdate(update: DataModelUpdate): void {
+  private sendDataModelUpdate(update: DataModelUpdate): void {
     const transport = this.appBridge?.transport;
     if (!transport) {
       return;
@@ -273,6 +400,20 @@ export class McpAppBridge {
       .catch((error: unknown) => {
         console.error(`${LOG_PREFIX} Failed to send data-model-update for ${update.key}:`, error);
       });
+  }
+
+  private handleUpdateModelContext(structuredContent: Record<string, unknown> | undefined): void {
+    if (!structuredContent) {
+      return;
+    }
+    if ('modelContext' in this.dataPaths) {
+      this.handleDataModelChange({key: 'modelContext', value: structuredContent});
+    }
+    for (const [key, value] of Object.entries(structuredContent)) {
+      if (key in this.dataPaths && key !== 'modelContext') {
+        this.handleDataModelChange({key, value});
+      }
+    }
   }
 
   private async handleToolCall(params: CallToolRequest['params']): Promise<CallToolResult> {

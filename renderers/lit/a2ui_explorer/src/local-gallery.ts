@@ -23,6 +23,7 @@ import {renderMarkdown} from '@a2ui/markdown-it';
 import {demoCatalog, createDemoCatalogs} from './demo-catalog.js';
 import {getDemoItems, DemoItem} from './examples';
 import {appStyles} from './local-gallery.css';
+import {observeMcpApps} from './mcp-app-resizer.js';
 
 @customElement('local-gallery')
 export class LocalGallery extends LitElement {
@@ -50,6 +51,7 @@ export class LocalGallery extends LitElement {
   );
 
   private dataModelSubscription?: {unsubscribe: () => void};
+  private stopMcpResizeObserver?: () => void;
 
   static override styles = [appStyles];
 
@@ -78,6 +80,7 @@ export class LocalGallery extends LitElement {
     this.isRightSidebarCollapsed = this.getLocalStorage('isRightSidebarCollapsed') === 'true';
 
     window.addEventListener('keydown', this.handleKeyDown);
+    this.stopMcpResizeObserver = observeMcpApps(() => this.renderRoot);
 
     this.processor.model.onSurfaceCreated.subscribe(surface => {
       surface.onError.subscribe((err: {message?: string}) => {
@@ -91,6 +94,8 @@ export class LocalGallery extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('keydown', this.handleKeyDown);
+    this.stopMcpResizeObserver?.();
+    this.stopMcpResizeObserver = undefined;
   }
 
   private handleKeyDown = (event: KeyboardEvent) => {

@@ -20,6 +20,7 @@ import {A2uiSurface, MarkdownContext, type ReactCatalogComponent} from '@a2ui/re
 import {demoCatalog, createDemoCatalogs} from './demo-catalog';
 import {getDemoItems} from './examples';
 import {renderMarkdown} from '@a2ui/markdown-it';
+import {observeMcpApps} from './mcp-app-resizer';
 import styles from './App.module.css';
 
 const demoItems = getDemoItems();
@@ -143,6 +144,10 @@ export const App = ({initialExampleId, onAction}: AppProps) => {
   useEffect(() => {
     onActionRef.current = onAction;
   }, [onAction]);
+
+  useEffect(() => {
+    return observeMcpApps(() => (typeof document !== 'undefined' ? document.body : null));
+  }, []);
 
   // Handle keyboard shortcuts ('j' and 'k')
   useEffect(() => {

@@ -467,6 +467,74 @@ describe('McpAppBridge', () => {
     });
   });
 
+  describe('standard MCP Apps tool-input, tool-result and model context', () => {
+    it('pushes bound data as tool-input on initialization and when host data changes', async () => {
+      const app = new App({name: 'Test app', version: '1.0.0'}, {}, {autoResize: false});
+      const toolInputs: Array<Record<string, unknown> | undefined> = [];
+      app.ontoolinput = params => {
+        toolInputs.push(params.arguments);
+      };
+      await app.connect(appTransport);
+      connected = {app, protocol: app, updates: []};
+
+      await waitFor(() => toolInputs.length === 1, 'initial tool-input received');
+      expect(toolInputs[0]).toEqual({
+        game: {score: 1, player: 'ann'},
+        title: 'Pong',
+      });
+
+      host.setData('/title', 'Breakout');
+      await waitFor(() => toolInputs.length === 2, 'updated tool-input received');
+      expect(toolInputs[1]).toEqual({
+        game: {score: 1, player: 'ann'},
+        title: 'Breakout',
+      });
+    });
+
+    it('pushes bound toolResult as normalized CallToolResult on initialization and updates', async () => {
+      bridge.dispose();
+      [hostTransport, appTransport] = linkTransports();
+      host.setData('/budget', {runwayMonths: 24, stage: 'seed'});
+      props = {
+        ...props,
+        dataPaths: {toolResult: '/budget'},
+      };
+      bridge = new McpAppBridge({
+        frame,
+        host,
+        getProps: () => props,
+        transport: hostTransport,
+      });
+      bridge.start();
+
+      const app = new App({name: 'Test app', version: '1.0.0'}, {}, {autoResize: false});
+      const toolResults: Array<Record<string, unknown>> = [];
+      app.ontoolresult = result => {
+        toolResults.push(result as unknown as Record<string, unknown>);
+      };
+      await app.connect(appTransport);
+      connected = {app, protocol: app, updates: []};
+
+      await waitFor(() => toolResults.length === 1, 'initial tool-result received');
+      expect(toolResults[0]['structuredContent']).toEqual({runwayMonths: 24, stage: 'seed'});
+
+      host.setData('/budget/stage', 'series_a');
+      await waitFor(() => toolResults.length === 2, 'updated tool-result received');
+      expect(toolResults[1]['structuredContent']).toEqual({runwayMonths: 24, stage: 'series_a'});
+    });
+
+    it('writes updateModelContext structuredContent into matching bound data paths', async () => {
+      const {app} = await connectApp();
+      await waitFor(() => connected!.updates.length === 2, 'initial updates received');
+
+      await app.updateModelContext({
+        structuredContent: {title: 'Chess'},
+      });
+
+      await waitFor(() => host.getData('/title') === 'Chess', 'title updated from model context');
+    });
+  });
+
   describe('dispose', () => {
     it('closes the transport and releases the subscriptions', async () => {
       const {updates} = await connectApp();

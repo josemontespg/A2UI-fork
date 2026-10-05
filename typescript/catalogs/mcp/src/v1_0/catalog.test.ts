@@ -16,6 +16,7 @@
 
 import toolCallExample from '../../../../../catalogs/mcp/v1/examples/00_inline-tool-call.json' with {type: 'json'};
 import dataBindingExample from '../../../../../catalogs/mcp/v1/examples/01_data-binding.json' with {type: 'json'};
+import orderSummaryExample from '../../../../../catalogs/mcp/v1/examples/mcp-app-order-summary.json' with {type: 'json'};
 import {
   isWebComponentImplementation,
   MessageProcessor,
@@ -75,6 +76,18 @@ describe('mcpCatalog', () => {
     expect(surface.componentsModel.get('score_app')?.type).toBe('McpApp');
     expect(surface.componentsModel.get('name_field')?.type).toBe('TextField');
     expect(surface.dataModel.get('/player')).toEqual({name: 'Ada', score: 0});
+    surface.dispose();
+  });
+
+  it('processes the order summary example once composed with the basic catalog', () => {
+    const processor = new MessageProcessor<WebComponentImplementation>([createComposedCatalog()]);
+
+    processor.processMessages(parseExampleMessages(orderSummaryExample));
+
+    const surface = processor.model.getSurface('gallery-mcp-app-order-summary')!;
+    expect(surface.componentsModel.get('order_app')?.type).toBe('McpApp');
+    expect(surface.componentsModel.get('discount_field')?.type).toBe('TextField');
+    expect(surface.dataModel.get('/order/id')).toBe('A-1042');
     surface.dispose();
   });
 });

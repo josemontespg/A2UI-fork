@@ -42,6 +42,7 @@ import {A2uiClientAction} from '@a2ui/web_core/v0_9';
 import {A2uiExample, A2UI_VERSION, A2UI_EXAMPLES, Version} from './types';
 import {ActionDispatcher} from './action-dispatcher.service';
 import {Catalog as CatalogV08, DEFAULT_CATALOG as DEFAULT_CATALOG_V08} from '@a2ui/angular/v0_8';
+import {observeMcpApps} from './mcp-app-resizer';
 
 /**
  * Dependency injection token for enabling universal components in the explorer (used by tests only).
@@ -922,12 +923,15 @@ export class DemoComponent implements OnInit, OnDestroy {
     this.selectExample(this.examples[prevIndex]);
   }
 
+  private stopMcpResizeObserver?: () => void;
+
   ngOnInit(): void {
     this.isDataModelFolded = this.getLocalStorage('isDataModelFolded') === 'true';
     this.isSurfaceMessageFolded = this.getLocalStorage('isSurfaceMessageFolded') === 'true';
     this.isEventsLogFolded = this.getLocalStorage('isEventsLogFolded') === 'true';
     this.isLeftSidebarCollapsed = this.getLocalStorage('isLeftSidebarCollapsed') === 'true';
     this.isRightSidebarCollapsed = this.getLocalStorage('isRightSidebarCollapsed') === 'true';
+    this.stopMcpResizeObserver = observeMcpApps(() => this.elementRef.nativeElement);
     this.selectExampleFromUrl();
   }
 
@@ -1044,7 +1048,10 @@ export class DemoComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {}
+  ngOnDestroy(): void {
+    this.stopMcpResizeObserver?.();
+    this.stopMcpResizeObserver = undefined;
+  }
 
   private slugify(text: string): string {
     return text

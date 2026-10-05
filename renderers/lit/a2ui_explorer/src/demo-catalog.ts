@@ -15,6 +15,7 @@
  */
 
 import {IFRAME_CATALOG_ID, iframeCatalog} from '@a2ui/catalog-iframe';
+import {MCP_CATALOG_ID, mcpCatalog} from '@a2ui/catalog-mcp/v1_0';
 import {Catalog} from '@a2ui/web_core/v0_9';
 import {BASIC_FUNCTIONS} from '@a2ui/web_core/v0_9/basic_catalog';
 import {basicCatalog as basicCatalogV10} from '@a2ui/web_core/v1_0';
@@ -43,5 +44,12 @@ export function createDemoCatalogs(): Array<Catalog<LitComponentApi>> {
     [...basicCatalogV10.functions.values()],
     basicCatalogV10.themeSchema,
   );
-  return [iframeDemoCatalog];
+  const mcpDemoCatalog = new Catalog<LitComponentApi>(
+    MCP_CATALOG_ID,
+    '1.0',
+    [...basicCatalogV10.components.values(), ...mcpCatalog.components.values()],
+    [...basicCatalogV10.functions.values(), ...mcpCatalog.functions.values()],
+    basicCatalogV10.themeSchema,
+  );
+  return [iframeDemoCatalog, mcpDemoCatalog];
 }
